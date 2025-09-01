@@ -1,7 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
-from .models import User
-
+from .models import User, Payment
 
 class CustomUserAdmin(UserAdmin):
     # Убираем поле username из ordering
@@ -25,5 +24,9 @@ class CustomUserAdmin(UserAdmin):
         }),
     )
 
+@admin.register(Payment)
+class PaymentAdmin(admin.ModelAdmin):
+    list_display = ('user', 'payment_date', 'course', 'lesson', 'amount', 'payment_method')
+    list_filter = ('payment_method', 'payment_date')
 
 admin.site.register(User, CustomUserAdmin)
