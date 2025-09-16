@@ -5,9 +5,9 @@ class Course(models.Model):
     title = models.CharField(max_length=150, verbose_name='Название')
     preview = models.ImageField(upload_to='courses/previews/', verbose_name='Превью', blank=True, null=True)
     description = models.TextField(verbose_name='Описание', blank=True, null=True)
+    price = models.DecimalField(max_digits=10, decimal_places=2, verbose_name='Цена', default=0)  # ← ДОБАВИТЬ
     owner = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.SET_NULL,
                              null=True, blank=True, verbose_name='Владелец')
-
     class Meta:
         verbose_name = 'Курс'
         verbose_name_plural = 'Курсы'
