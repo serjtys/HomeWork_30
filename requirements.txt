@@ -10,3 +10,6 @@ drf-yasg==1.21.7
 stripe==7.0.0
 requests==2.31.0
 django-cors-headers==4.3.1
+celery==5.3.4
+redis==5.0.1
+django-celery-beat==2.5.0

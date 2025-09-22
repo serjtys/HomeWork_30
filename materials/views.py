@@ -34,6 +34,16 @@ class CourseViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save(owner=self.request.user)
 
+    def perform_update(self, serializer):
+        instance = self.get_object()
+        old_updated_at = instance.updated_at
+
+        instance = serializer.save()
+
+        # Проверяем, что курс действительно обновился
+        if instance.updated_at > old_updated_at:
+            from .tasks import send_course_update_notification
+            send_course_update_notification.delay(instance.id)
 
 class LessonCreateAPIView(generics.CreateAPIView):
     queryset = Lesson.objects.all()
