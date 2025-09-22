@@ -7,6 +7,9 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from .paginators import MaterialsPagination
+from .services.stripe_service import create_stripe_product, create_stripe_price, create_stripe_session
+from users.models import Payment
+from django.http import HttpResponse
 
 
 class CourseViewSet(viewsets.ModelViewSet):
@@ -91,3 +94,59 @@ class SubscriptionAPIView(APIView):
             subscription.delete()
             message = 'Подписка удалена'
             return Response({"message": message}, status=status.HTTP_200_OK)
+
+
+class PaymentAPIView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, *args, **kwargs):
+        user = request.user
+        course_id = request.data.get('course_id')
+
+        if not course_id:
+            return Response({"error": "course_id обязателен"}, status=status.HTTP_400_BAD_REQUEST)
+
+        course = get_object_or_404(Course, id=course_id)
+
+        # Создаем продукт в Stripe
+        product_id = create_stripe_product(
+            name=course.title,
+            description=course.description or "Оплата курса"
+        )
+
+        # Создаем цену
+        # Берем цену directly из курса
+        amount = course.price
+
+        # Для теста можно было использовать хардкод:
+        # amount = 1000
+
+        price_id = create_stripe_price(product_id, amount)
+
+        # Создаем сессию оплаты
+        success_url = "http://localhost:8000/api/payment/success/"
+        cancel_url = "http://localhost:8000/api/payment/cancel/"
+        payment_url, session_id = create_stripe_session(price_id, success_url, cancel_url)
+
+        # Сохраняем платеж в базе
+        payment = Payment.objects.create(
+            user=user,
+            course=course,
+            amount=amount,
+            payment_method='transfer'
+        )
+
+        return Response({
+            "payment_url": payment_url,
+            "session_id": session_id,
+            "payment_id": payment.id
+        }, status=status.HTTP_201_CREATED)
+
+
+class PaymentSuccessAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse("✅ Оплата прошла успешно! Курс добавлен в ваш аккаунт.")
+
+class PaymentCancelAPIView(APIView):
+    def get(self, request, *args, **kwargs):
+        return HttpResponse("❌ Оплата отменена. Вы можете попробовать снова.")
