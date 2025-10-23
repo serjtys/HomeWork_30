@@ -2,6 +2,8 @@ name: Django CI/CD
 
 on:
   push:
+    branches: [ develop, homework-35.2 ]
+  pull_request:
     branches: [ develop ]
 
 jobs:
