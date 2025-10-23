@@ -271,3 +271,84 @@ python manage.py test
     Проверьте логи: docker compose logs -f
 
     Убедитесь что Docker запущен: docker --version
+
+## 🚀 Инструкция по деплою
+
+### Настройка сервера (Ubuntu 20.04+)
+
+1. **Обновление системы:**
+```bash
+sudo apt update && sudo apt upgrade -y
+```
+    Установка базовых пакетов:
+
+```bash
+
+sudo apt install -y python3-pip python3-venv nginx postgresql postgresql-contrib redis-server git
+```
+    Настройка PostgreSQL:
+
+```bash
+
+sudo -u postgres psql -c "CREATE DATABASE myapp_db;"
+sudo -u postgres psql -c "CREATE USER myapp_user WITH PASSWORD 'your_password';"
+sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE myapp_db TO myapp_user;"
+```
+    Настройка firewall:
+
+```bash
+
+sudo ufw allow 'OpenSSH'
+sudo ufw allow 'Nginx Full'
+sudo ufw enable
+```
+Настройка GitHub Actions
+
+    Добавьте secrets в репозитории:
+
+    SERVER_IP - IP вашего сервера
+
+    SSH_USER - пользователь для подключения (например, ubuntu)
+
+    SSH_KEY - приватный SSH-ключ
+
+    DJANGO_SECRET_KEY - секретный ключ Django
+
+    DJANGO_DEBUG - False
+
+    DJANGO_ALLOWED_HOSTS - ваш IP или домен
+
+    При пуше в ветку develop автоматически:
+
+    Запускаются тесты
+
+    Происходит деплой на сервер
+
+    Приложение перезапускается
+
+Проверка работоспособности
+
+После деплоя приложение доступно по IP сервера:
+```bash
+
+curl http://your-server-ip
+```
+Логи и мониторинг
+
+Просмотр логов приложения:
+```bash
+
+sudo journalctl -u myapp -f
+```
+Просмотр логов Nginx:
+```bash
+
+sudo tail -f /var/log/nginx/error.log
+```
+Статус сервисов:
+```bash
+
+sudo systemctl status myapp
+sudo systemctl status nginx
+sudo systemctl status redis
+```
