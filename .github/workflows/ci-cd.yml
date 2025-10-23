@@ -26,6 +26,11 @@ jobs:
 
     - name: Run tests
       run: |
+        export SECRET_KEY="test-secret-key-for-ci-12345"
+        export DEBUG="True"
+        export ALLOWED_HOSTS="localhost,127.0.0.1"
+        python manage.py migrate
+        python manage.py test
         python manage.py test
 
   deploy:
