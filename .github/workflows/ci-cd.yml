@@ -29,6 +29,8 @@ jobs:
         SECRET_KEY: "test-secret-key-for-ci-12345"
         DEBUG: "True"
         ALLOWED_HOSTS: "localhost,127.0.0.1"
+        DB_ENGINE: "django.db.backends.sqlite3"
+        DB_NAME: "test_db.sqlite3"
       run: |
         python manage.py migrate
         python manage.py test
