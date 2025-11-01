@@ -35,15 +35,19 @@ jobs:
         python manage.py migrate
         python manage.py test
 
-  deploy:
-    runs-on: ubuntu-latest
-    needs: test
+    - name: Build Docker images
+      run: |
+        docker compose build
 
-    steps:
+deploy:
+  runs-on: ubuntu-latest
+  needs: test
+
+  steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to server
+    - name: Deploy to server via Docker
       uses: appleboy/ssh-action@v0.1.7
       with:
         host: ${{ secrets.SERVER_IP }}
@@ -52,13 +56,7 @@ jobs:
         script: |
           cd /home/test/myapp
           git pull origin develop
-          python3 -m venv venv
-          source venv/bin/activate
-          pip install -r requirements.txt
-          export SECRET_KEY="${{ secrets.DJANGO_SECRET_KEY }}"
-          export DEBUG="${{ secrets.DJANGO_DEBUG }}"
-          export ALLOWED_HOSTS="${{ secrets.DJANGO_ALLOWED_HOSTS }}"
-          export STATIC_ROOT="/home/test/myapp/static"
-          python manage.py migrate
-          python manage.py collectstatic --noinput
-          sudo systemctl restart myapp
+          docker compose down
+          docker compose up -d --build
+          docker compose exec backend python manage.py migrate
+          docker compose exec backend python manage.py collectstatic --noinput
