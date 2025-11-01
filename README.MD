@@ -23,6 +23,7 @@ Django REST Framework приложение для онлайн-обучения 
 - **Документация API**: Swagger/DRF-YASG
 - **Аутентификация**: JWT Tokens
 - **Контейнеризация**: Docker, Docker Compose
+- **Веб-сервер**: Nginx
 
 ## 🚀 Запуск с Docker Compose
 
@@ -34,40 +35,56 @@ Django REST Framework приложение для онлайн-обучения 
 
 1. **Клонируйте репозиторий и перейдите в папку проекта**
 
+```bash
+https://github.com/serjtys/HomeWork_30.git
+``` 
+
 2. **Настройте переменные окружения:**
+
 ```bash
 cp .env.example .env
 ``` 
 
-Отредактируйте .env файл, указав:
+3. **Отредактируйте .env файл, указав:**
 
-    *Секретный ключ Django*
+    SECRET_KEY - Секретный ключ Django
 
-    Данные для PostgreSQL
+    DB_NAME, DB_USER, DB_PASSWORD - Данные для PostgreSQL
 
-    Ключи Stripe API
+    REDIS_URL - Адрес Redis
 
-    Настройки email
+    STRIPE_API_KEY - Ключи Stripe API
 
-    Запустите все сервисы:
+    ALLOWED_HOSTS - Домены для доступа (через запятую)
+
+4. **Запустите все сервисы:**
+
 ```bash
 docker compose up -d --build
+```    
 
-    Создайте суперпользователя:
-```
-bash
+5. **Выполните миграции и создайте суперпользователя:**
 
+```bash
+docker compose exec backend python manage.py migrate
 docker compose exec backend python manage.py createsuperuser
+```
+
+6. **Соберите статические файлы:**
+
+```bash
+docker compose exec backend python manage.py collectstatic --noinput
+```
 
 ### 📊 Проверка работоспособности
 
-    Главная страница: http://localhost:8000
+    Главная страница: http://localhost
 
-    Админ-панель: http://localhost:8000/admin
+    Админ-панель: http://localhost/admin
 
-    API документация: http://localhost:8000/swagger/
+    API документация: http://localhost/swagger/
 
-    Redoc документация: http://localhost:8000/redoc/
+    Redoc документация: http://localhost/redoc/
 
 ### Проверка сервисов:
 
@@ -78,8 +95,11 @@ docker compose ps
 # Логи приложения
 docker compose logs backend -f
 
+# Логи Nginx
+docker compose logs nginx -f
+
 # Проверка базы данных
-docker compose exec db psql -U your-database-user -d your-database-name -c "SELECT version();"
+docker compose exec db psql -U ${DB_USER} -d ${DB_NAME} -c "SELECT version();"
 
 # Проверка Redis
 docker compose exec redis redis-cli ping
@@ -88,22 +108,82 @@ docker compose exec redis redis-cli ping
 docker compose logs celery -f
 ```
 
+###🏗 Архитектура Docker
+
+#Сервисы:
+
+    backend - Django приложение
+
+    db - PostgreSQL база данных
+
+    redis - Redis для кэширования и Celery
+
+    celery - Celery worker для фоновых задач
+
+    celery_beat - Celery beat для периодических задач
+
+    nginx - Веб-сервер и reverse proxy
+
+
+###🔧 Управление
+
+#Docker команды
+
+```bash
+
+# Запуск
+docker compose up -d --build
+
+# Остановка
+docker compose down
+
+# Остановка с удалением volumes
+docker compose down -v
+
+# Просмотр логов
+docker compose logs -f [service_name]
+
+# Выполнение команд в контейнере
+docker compose exec backend python manage.py [command]
+
+# Пересборка конкретного сервиса
+docker compose build backend
+```
+
+#Django команды
+
+```bash
+
+# Миграции
+docker compose exec backend python manage.py makemigrations
+docker compose exec backend python manage.py migrate
+
+# Создание суперпользователя
+docker compose exec backend python manage.py createsuperuser
+
+# Сбор статики
+docker compose exec backend python manage.py collectstatic --noinput
+
+# Запуск тестов
+docker compose exec backend python manage.py test
+```
+
 ### 💻 Локальная разработка (без Docker)
 
-# Активируйте виртуальное окружение:
+1. **Активируйте виртуальное окружение:**
 
 ```bash
 
 python -m venv venv
 source venv/bin/activate
 ```
-# Установите зависимости:
+2. **Установите зависимости:**
 
 ```bash
 
 pip install -r requirements.txt
 ```
-# Настройте базу данных PostgreSQL и Redis
+3. **Настройте базу данных PostgreSQL и Redis**
 
     Примените миграции:
 
@@ -138,6 +218,113 @@ celery -A config worker --loglevel=info
 ```bash
 
 celery -A config beat --loglevel=info
+```
+
+
+### 🔄 CI/CD Pipeline
+
+#GitHub Actions Workflow
+
+**При пуше в ветки develop или homework-35.2 автоматически запускается:**
+
+    Тестирование - запуск unit-тестов Django
+
+    Сборка Docker - проверка сборки всех образов
+
+    Деплой - автоматический деплой на сервер через Docker Compose
+
+#Настройка Secrets в GitHub
+
+**Для работы CI/CD необходимо добавить в настройках репозитория:**
+
+    SERVER_IP - IP адрес сервера
+
+    SSH_USER - пользователь для SSH (например, ubuntu)
+
+    SSH_KEY - приватный SSH ключ для доступа к серверу
+
+    DJANGO_SECRET_KEY - секретный ключ Django
+
+    DJANGO_DEBUG - False для продакшена
+
+    DJANGO_ALLOWED_HOSTS - домен или IP сервера
+
+
+###🚀 Деплой на сервер
+#Настройка сервера (Ubuntu 20.04+)
+
+**Обновление системы и установка Docker:**
+
+```bash
+
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y docker.io docker-compose-v2 git
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+    
+**Настройка firewall:**
+
+```bash
+
+sudo ufw allow OpenSSH
+sudo ufw allow 80    # HTTP
+sudo ufw allow 443   # HTTPS
+sudo ufw enable
+```
+
+**Добавление пользователя в группу docker:**
+
+```bash
+
+sudo usermod -aG docker $USER
+# Перелогиньтесь или выполните:
+newgrp docker
+```
+
+**Автоматический деплой через GitHub Actions**
+
+При пуше в ветку develop:
+
+    Запускаются тесты
+
+    Собираются Docker образы
+
+    Происходит деплой на сервер через SSH
+
+    На сервере выполняются команды:
+```bash
+git pull origin develop
+docker compose down
+docker compose up -d --build
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py collectstatic --noinput
+```
+
+#Ручной деплой на сервер
+
+    Клонирование репозитория:
+
+```bash
+
+git clone https://github.com/your-username/your-repo.git /home/ubuntu/app
+cd /home/ubuntu/app
+```
+    Настройка переменных окружения:
+
+```bash
+
+cp .env.example .env
+nano .env  # Отредактируйте настройки
+```
+    Запуск приложения:
+
+```bash
+
+docker compose up -d --build
+docker compose exec backend python manage.py migrate
+docker compose exec backend python manage.py collectstatic --noinput
+docker compose exec backend python manage.py createsuperuser
 ```
 
 ### 📚 API Endpoints
@@ -216,39 +403,6 @@ celery -A config beat --loglevel=info
 
     История транзакций
 
-### 🔧 Управление
-## Docker команды
-```bash
-
-# Запуск
-docker compose up -d --build
-
-# Остановка
-docker compose down
-
-# Просмотр логов
-docker compose logs -f [service_name]
-
-# Выполнение команд в контейнере
-docker compose exec backend python manage.py [command]
-```
-
-## Django команды
-```bash
-
-# Миграции
-python manage.py makemigrations
-python manage.py migrate
-
-# Создание суперпользователя
-python manage.py createsuperuser
-
-# Сбор статики
-python manage.py collectstatic
-
-# Запуск тестов
-python manage.py test
-```
 
 ### 📝 Примечания
 
@@ -353,18 +507,18 @@ sudo systemctl status nginx
 sudo systemctl status redis
 ```
 
-## Деплой
+### 🌐Деплой
 
 Приложение развернуто по адресу: http://51.250.20.114:8000
 
-### Инструкция по настройке сервера:
+## Инструкция по настройке сервера:
 1. Создать ВМ в Яндекс Облаке
-2. Установить Python, nginx, настроить firewall
-3. Настроить systemd сервис для автоматического запуска
+2. Установить Docker и Docker Compose
+3. Настроить firewall (открыть порты 80, 443, 22)
 4. Добавить SSH-ключ в настройки ВМ
 
 ### Инструкция по деплою:
 1. При пуше в ветку develop запускается GitHub Actions workflow
-2. Проходят автоматические тесты
-3. После успешных тестов происходит деплой на сервер
-4. Приложение автоматически перезапускается
+2. Проходят автоматические тесты и сборка Docker образов
+3. После успешных проверок происходит деплой на сервер через Docker Compose
+4. Приложение автоматически перезапускается в контейнерах
