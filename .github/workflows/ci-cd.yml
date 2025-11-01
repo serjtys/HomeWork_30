@@ -2,7 +2,7 @@ name: Django CI/CD
 
 on:
   push:
-    branches: [ develop, homework-35.2 ]
+    branches: [ develop, HomeWork_END, homework-35.2 ]
   pull_request:
     branches: [ develop ]
 
@@ -39,11 +39,12 @@ jobs:
       run: |
         docker compose build
 
-deploy:
-  runs-on: ubuntu-latest
-  needs: test
+  deploy:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref == 'refs/heads/HomeWork_END'
 
-  steps:
+    steps:
     - name: Checkout code
       uses: actions/checkout@v4
 
@@ -55,7 +56,7 @@ deploy:
         key: ${{ secrets.SSH_KEY }}
         script: |
           cd /home/test/myapp
-          git pull origin develop
+          git pull origin HomeWork_END
           docker compose down
           docker compose up -d --build
           docker compose exec backend python manage.py migrate
